@@ -42,23 +42,37 @@ class Mesh:
 
     material: Material = field(default_factory=lambda: Material())
     base_direction: np.ndarray = field(default_factory=lambda: np.array([1, 0, 0]))
+    dynamic_material: bool = False
 
     def __post_init__(self):
         """
         Post init function to create materials.
         """
-        material = rendering.MaterialRecord()
-        material.base_color = np.hstack((self.material.colour, self.material.alpha))
-        material.shader = "defaultLitTransparency"
-        material.base_metallic = self.material.metallic
-        material.base_roughness = self.material.roughness
-        material.base_reflectance = self.material.reflectance
-        material.base_anisotropy = self.material.anisotropy
-
-        self.o3d_material = material
+        
+        if not self.dynamic_material:
+            material = rendering.MaterialRecord()
+            material.base_color = np.hstack((self.material.colour, self.material.alpha))
+            material.shader = "defaultLitTransparency"
+            material.base_metallic = self.material.metallic
+            material.base_roughness = self.material.roughness
+            material.base_reflectance = self.material.reflectance
+            material.base_anisotropy = self.material.anisotropy
+            self.o3d_material = material
+        else:
+            self.o3d_material = np.empty(self.material.colour.shape[:2], dtype=object)
+            for i in range(self.material.colour.shape[0]):
+                for j in range(self.material.colour.shape[1]):
+                    material = rendering.MaterialRecord()
+                    material.base_color = np.hstack((self.material.colour[i, j], self.material.alpha))
+                    material.shader = "defaultLitTransparency"
+                    material.base_metallic = self.material.metallic
+                    material.base_roughness = self.material.roughness
+                    material.base_reflectance = self.material.reflectance
+                    material.base_anisotropy = self.material.anisotropy
+                    self.o3d_material[i, j] = material
 
     def instantiate_mesh(
-        self, starting_position: np.ndarray, starting_orientation: np.ndarray = None
+        self, starting_position: np.ndarray, starting_orientation: np.ndarray = None, step: int = 0, particle_id: int = 0
     ) -> o3d.geometry.TriangleMesh:
         """
         Create a mesh object defined by the dataclass.

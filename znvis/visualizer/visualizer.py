@@ -369,9 +369,16 @@ class Visualizer:
         # Add the particles to the visualizer.
         if initial:
             for i, item in enumerate(self.particles):
-                visualizer.add_geometry(
-                    item.name, item.mesh_list[self.counter], item.mesh.o3d_material
-                )
+                if not item.mesh.dynamic_material:
+                    visualizer.add_geometry(
+                        item.name, item.mesh_list[self.counter], item.mesh.o3d_material
+                    )
+                else: # UGLY
+                    mesh_list = item.step_mesh_list[self.counter]
+                    for j, mesh in enumerate(mesh_list):
+                        visualizer.add_geometry(
+                            f"{item.name}_{j}", mesh, item.mesh.o3d_material[self.counter,j]
+                        )
 
             # check for bounding box
             if self.bounding_box is not None:
@@ -379,10 +386,18 @@ class Visualizer:
         else:
             for i, item in enumerate(self.particles):
                 if not item.static:
-                    visualizer.remove_geometry(item.name)
-                    visualizer.add_geometry(
-                        item.name, item.mesh_list[self.counter], item.mesh.o3d_material
-                    )
+                    if not item.mesh.dynamic_material:
+                        visualizer.remove_geometry(item.name)
+                        visualizer.add_geometry(
+                            item.name, item.mesh_list[self.counter], item.mesh.o3d_material
+                        )
+                    else: # UGLY
+                        mesh_list = item.step_mesh_list[self.counter]
+                        for j, mesh in enumerate(mesh_list):
+                            visualizer.remove_geometry(f"{item.name}_{j}")
+                            visualizer.add_geometry(
+                                f"{item.name}_{j}", mesh, item.mesh.o3d_material[self.counter,j]
+                            )
 
 
     def _draw_vector_field(self, visualizer=None, initial: bool = False):
@@ -402,7 +417,7 @@ class Visualizer:
         if visualizer is None:
             visualizer = self.vis
         
-        if initial:
+        '''if initial:
             for i, item in enumerate(self.vector_field):
                 visualizer.add_geometry(
                     item.name, item.mesh_list[self.counter], item.mesh.o3d_material
@@ -413,7 +428,35 @@ class Visualizer:
                     visualizer.remove_geometry(item.name)
                     visualizer.add_geometry(
                         item.name, item.mesh_list[self.counter], item.mesh.o3d_material
+                    )'''
+
+        if initial:
+            for i, item in enumerate(self.vector_field):
+                if not item.mesh.dynamic_material:
+                    visualizer.add_geometry(
+                        item.name, item.mesh_list[self.counter], item.mesh.o3d_material
                     )
+                else: # UGLY
+                    mesh_list = item.step_mesh_list[self.counter]
+                    for j, mesh in enumerate(mesh_list):
+                        visualizer.add_geometry(
+                            f"{item.name}_{j}", mesh, item.mesh.o3d_material[self.counter,j]
+                        )
+        else:
+            for i, item in enumerate(self.vector_field):
+                if not item.static:
+                    if not item.mesh.dynamic_material:
+                        visualizer.remove_geometry(item.name)
+                        visualizer.add_geometry(
+                            item.name, item.mesh_list[self.counter], item.mesh.o3d_material
+                        )
+                    else: # UGLY
+                        mesh_list = item.step_mesh_list[self.counter]
+                        for j, mesh in enumerate(mesh_list):
+                            visualizer.remove_geometry(f"{item.name}_{j}")
+                            visualizer.add_geometry(
+                                f"{item.name}_{j}", mesh, item.mesh.o3d_material[self.counter,j]
+                            )
 
     def _continuous_trajectory(self, vis):
         """
@@ -451,11 +494,42 @@ class Visualizer:
 
             if self.vector_field is not None:
                 for item in self.vector_field:
+                    if not item.mesh.dynamic_material:
+                        if item.static:
+                            mesh_dict[item.name] = {
+                            "mesh": item.mesh_list[0],
+                            "bsdf": item.mesh.material.mitsuba_bsdf,
+                            "material": item.mesh.o3d_material,
+                        }
+                        else:
+                            mesh_dict[item.name] = {
+                                "mesh": item.mesh_list[self.counter],
+                                "bsdf": item.mesh.material.mitsuba_bsdf,
+                                "material": item.mesh.o3d_material,
+                            }
+                    else:
+                        mesh_list = item.step_mesh_list[self.counter]
+                        for j, mesh in enumerate(mesh_list):
+                            if item.static:
+                                mesh_dict[f"{item.name}_{j}"] = {
+                                    "mesh": mesh,
+                                    "bsdf": item.mesh.material.mitsuba_bsdf,
+                                    "material": item.mesh.o3d_material[self.counter,j],
+                                }
+                            else:
+                                mesh_dict[f"{item.name}_{j}"] = {
+                                    "mesh": mesh,
+                                    "bsdf": item.mesh.material.mitsuba_bsdf,
+                                    "material": item.mesh.o3d_material[self.counter,j],
+                                }
+            
+            for item in self.particles:
+                if not item.mesh.dynamic_material:
                     if item.static:
                         mesh_dict[item.name] = {
-                        "mesh": item.mesh_list[0],
-                        "bsdf": item.mesh.material.mitsuba_bsdf,
-                        "material": item.mesh.o3d_material,
+                            "mesh": item.mesh_list[0],
+                            "bsdf": item.mesh.material.mitsuba_bsdf,
+                            "material": item.mesh.o3d_material,
                     }
                     else:
                         mesh_dict[item.name] = {
@@ -463,20 +537,21 @@ class Visualizer:
                             "bsdf": item.mesh.material.mitsuba_bsdf,
                             "material": item.mesh.o3d_material,
                         }
-            
-            for item in self.particles:
-                if item.static:
-                    mesh_dict[item.name] = {
-                        "mesh": item.mesh_list[0],
-                        "bsdf": item.mesh.material.mitsuba_bsdf,
-                        "material": item.mesh.o3d_material,
-                }
                 else:
-                    mesh_dict[item.name] = {
-                        "mesh": item.mesh_list[self.counter],
-                        "bsdf": item.mesh.material.mitsuba_bsdf,
-                        "material": item.mesh.o3d_material,
-                    }
+                    mesh_list = item.step_mesh_list[self.counter]
+                    for j, mesh in enumerate(mesh_list):
+                        if item.static:
+                            mesh_dict[f"{item.name}_{j}"] = {
+                                "mesh": mesh,
+                                "bsdf": item.mesh.material.mitsuba_bsdf,
+                                "material": item.mesh.o3d_material[self.counter,j],
+                            }
+                        else:
+                            mesh_dict[f"{item.name}_{j}"] = {
+                                "mesh": mesh,
+                                "bsdf": item.mesh.material.mitsuba_bsdf,
+                                "material": item.mesh.o3d_material[self.counter,j],
+                            }
 
             view_matrix = self.vis.scene.camera.get_view_matrix()
             self.renderer.render_mesh_objects(

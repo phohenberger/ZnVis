@@ -115,14 +115,28 @@ class VectorField:
 
         new_mesh = True
 
-        for i in track(range(n_time_steps), description=f"Building {self.name} Mesh"):
-            for j in range(n_particles):
-                if np.max(np.abs(self.direction[i][j])) > 0: # ignore vectors with length zero
-                    if new_mesh is False:
-                        mesh += self._create_mesh(self.position[i][j], self.direction[i][j])
-                    else:
-                        mesh = self._create_mesh(self.position[i][j], self.direction[i][j])
-                        new_mesh = False
-            new_mesh = True
+        if not self.mesh.dynamic_material:
+            for i in track(range(n_time_steps), description=f"Building {self.name} Mesh"):
+                for j in range(n_particles):
+                    if np.max(np.abs(self.direction[i][j])) > 0: # ignore vectors with length zero
+                        if new_mesh is False:
+                            mesh += self._create_mesh(self.position[i][j], self.direction[i][j])
+                        else:
+                            mesh = self._create_mesh(self.position[i][j], self.direction[i][j])
+                            new_mesh = False
+                new_mesh = True
 
-            self.mesh_list.append(mesh)
+                self.mesh_list.append(mesh)
+        else:
+            self.step_mesh_list = []
+            for i in track(range(n_time_steps), description=f"Building {self.name} Mesh"):
+                for j in range(n_particles):
+                    if np.max(np.abs(self.direction[i][j])) > 0: # ignore vectors with length zero
+                        if new_mesh is False:
+                            mesh_list.append(self._create_mesh(self.position[i][j], self.direction[i][j]))
+                        else:
+                            mesh_list = [self._create_mesh(self.position[i][j], self.direction[i][j])]
+                            new_mesh = False
+                new_mesh = True
+                self.step_mesh_list.append(mesh_list)
+        

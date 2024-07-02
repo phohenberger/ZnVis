@@ -122,21 +122,44 @@ class Particle:
         except ValueError:
             raise ValueError("There is no data for these particles.")
 
-        for i in track(range(n_time_steps), description=f"Building {self.name} Mesh"):
-            for j in range(n_particles):
-                if j == 0:
-                    if self.director is not None:
-                        mesh = self._create_mesh(
-                            self.position[i][j], self.director[i][j]
-                        )
+        if not self.mesh.dynamic_material:
+            for i in track(range(n_time_steps), description=f"Building {self.name} Mesh"):
+                for j in range(n_particles):
+                    if j == 0:
+                        if self.director is not None:
+                            mesh = self._create_mesh(
+                                self.position[i][j], self.director[i][j]
+                            )
+                        else:
+                            mesh = self._create_mesh(self.position[i][j], None)
                     else:
-                        mesh = self._create_mesh(self.position[i][j], None)
-                else:
-                    if self.director is not None:
-                        mesh += self._create_mesh(
-                            self.position[i][j], self.director[i][j]
-                        )
-                    else:
-                        mesh += self._create_mesh(self.position[i][j], None)
+                        if self.director is not None:
+                            mesh += self._create_mesh(
+                                self.position[i][j], self.director[i][j]
+                            )
+                        else:
+                            mesh += self._create_mesh(self.position[i][j], None)
 
-            self.mesh_list.append(mesh)
+                self.mesh_list.append(mesh)
+        else:
+            self.step_mesh_list = []
+            for i in track(range(n_time_steps), description=f"Building {self.name} Mesh"):
+                for j in range(n_particles):
+                    if j == 0:
+                        if self.director is not None:
+                            mesh_list = [self._create_mesh(
+                                self.position[i][j], self.director[i][j]
+                            )]
+                        else:
+                            mesh_list = [self._create_mesh(self.position[i][j], None)]
+                    else:
+                        if self.director is not None:
+                            mesh_list.append(self._create_mesh(
+                                self.position[i][j], self.director[i][j]
+                            ))
+                        else:
+                            mesh_list.append(self._create_mesh(self.position[i][j], None))
+                self.step_mesh_list.append(mesh_list)
+
+        
+
